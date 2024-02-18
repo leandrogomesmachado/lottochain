@@ -1,7 +1,11 @@
-pragma solidity ^0.4.21;
+pragma solidity ^0.8.24;
 
-contract LottochainSuperTickets {
-    function chargeDrawnAddress(address _drawnAddress) public;
+///@title Used as storage for Lottochain data/metadata
+///@author paulofelipe84 - paulo.barbosa@lottochain.io | Leandro Machado - sr.machado@gmail.com
+// SPDX-License-Identifier: MIT
+
+abstract contract LottochainSuperTickets {
+    function chargeDrawnAddress(address _drawnAddress) public virtual;
 }
 
 contract LottochainSTLogic {
@@ -37,7 +41,7 @@ contract LottochainSTLogic {
      *
      * Initializes contract with initial supply tokens to the creator of the contract
      */
-    function LottochainSTLogic() public {
+    constructor() {
         owner = msg.sender;
         // Just being safe.
         potentialOwner = msg.sender;
@@ -165,9 +169,9 @@ contract LottochainSTLogic {
                     // Updates the index for the moved ticket
                     ticketAddressIndex[ticketIndex] = ticketAddressIndex[superTicketsLastPosition];
                     // Removes the ticket index from _from's ticket list
-                    addressTickets[_from].length--;
+                    addressTickets[_from].pop();
                     // Removes the last position from superTickets array since it's been repositioned
-                    superTickets.length--;
+                    superTickets.pop();
                     // Decrements _value
                     _value--;
                 }
@@ -186,7 +190,7 @@ contract LottochainSTLogic {
                     // Updates the index for the moved ticket
                     ticketAddressIndex[ticketIndex] = addressTickets[_to].length - 1;
                     // Removes the index reference to the transferred ticket from _from's indexes list 
-                    addressTickets[_from].length--;
+                    addressTickets[_from].pop();
                     // Decrements _value
                     _value--;
                 }
