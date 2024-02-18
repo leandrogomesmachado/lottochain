@@ -29,7 +29,7 @@ contract LottochainSTLogic {
     mapping (uint => uint) public ticketAddressIndex;
     
     // Mapping to flag addresses that should not be part of the draws,
-    // such as the token contract owner and HTMLBunker wallets
+    // such as the token contract owner and other wallets
     mapping (address => bool) public exceptedAddresses;
     
     //Maps a wallet address to a boolean that says if that 
