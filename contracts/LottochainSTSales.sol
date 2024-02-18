@@ -1,14 +1,15 @@
-pragma solidity ^0.4.21;
+pragma solidity ^0.8.24;
 
-///@title Controls sales of super tickets (LOTTO tickets)
-///@author paulofelipe84 - paulo.barbosa@lottochain.io
+///@title Used as storage for Lottochain data/metadata
+///@author paulofelipe84 - paulo.barbosa@lottochain.io | Leandro Machado - sr.machado@gmail.com
+// SPDX-License-Identifier: MIT
 
 contract Lottochain {
     uint public superTicketPrice;
 }
 
-contract LottochainSuperTickets {
-    function transferFrom(address _from, address _to, uint256 _value) public returns (bool success);
+abstract contract LottochainSuperTickets {
+    function transferFrom(address payable _from, address payable _to, uint256 _value) public virtual returns (bool success);
 }
 
 contract LottochainSTSales {
@@ -61,7 +62,7 @@ contract LottochainSTSales {
      *
      * Assigns contract owner
      */
-    function LottochainSTSales() public {
+    constructor() {
         owner = msg.sender;
         // Just being safe.
         potentialOwner = msg.sender;
@@ -149,7 +150,7 @@ contract LottochainSTSales {
         //Instantiates the Super Tickets contract
         LottochainSuperTickets lottochainSuperTickets = LottochainSuperTickets(superTicketsContractAddress);
         //Makes the transfer
-        lottochainSuperTickets.transferFrom(mainSuperTicketsAddress, msg.sender, superTicketsQuantity);
+        lottochainSuperTickets.transferFrom(payable(mainSuperTicketsAddress), payable(msg.sender), superTicketsQuantity);
         
         //Distributes the income into two equal parts
         uint fiftyPercent = div(msg.value, 2); // 50%
@@ -164,7 +165,7 @@ contract LottochainSTSales {
     
     ///@dev Withdraws the fees gathered
     ///@param _to The address where to withdraw into
-    function withdrawFees(address _to, uint _wallet) onlyAdmins public {
+    function withdrawFees(address payable _to, uint _wallet) onlyAdmins public {
         require(_wallet == 1 || _wallet == 2);
         
         if (_wallet == 1) {
