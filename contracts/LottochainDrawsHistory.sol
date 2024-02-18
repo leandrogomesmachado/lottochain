@@ -1,7 +1,8 @@
-pragma solidity ^0.4.21;
+pragma solidity ^0.8.24;
 
 ///@title Used as storage for Lottochain data/metadata
-///@author paulofelipe84 - paulo.barbosa@lottochain.io
+///@author paulofelipe84 - paulo.barbosa@lottochain.io | Leandro Machado - sr.machado@gmail.com
+// SPDX-License-Identifier: MIT
 
 contract LottochainDrawsHistory {
     //Ownership support
@@ -45,7 +46,7 @@ contract LottochainDrawsHistory {
      *
      * Assigns contract owner
      */
-    function LottochainDrawsHistory() public {
+    constructor() {
         owner = msg.sender;
         // Just being safe.
         potentialOwner = msg.sender;
