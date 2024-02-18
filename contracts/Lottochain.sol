@@ -1,22 +1,27 @@
-pragma solidity ^0.4.21;
+pragma solidity ^0.8.24;
 
 ///@title Tickets deals with whole lifecycle of a Ticket: 
 ///Adds to and draws from daily, weekly and monthly prize lists.
 ///Draws from Super Ticket prize list
-///@author paulofelipe84 - paulo.barbosa@lottochain.io
+///@author paulofelipe84 - paulo.barbosa@lottochain.io | leandrogomesmachado - sr.machado@gmail.com
+// SPDX-License-Identifier: MIT
 
 contract LottochainSuperTickets {
     address[] public superTickets;
-    function superTicketsQty() public view returns(uint);
-    function chargeDrawnAddress(address _drawnAddress) public;
+    function superTicketsQty() public view returns(uint) {
+        return superTickets.length;
+    }
+    function chargeDrawnAddress(address _drawnAddress) public {
+
+    }
 }
 
-contract LottochainDrawsHistory {
-    function addDrawHistory(uint _drawDate, uint8 _drawType, bytes32 _hashDraw1, bytes32 _hashDraw2, address _drawnAddress, uint _prize) public;
-    function getDrawHistory(uint _drawDate, uint8 _drawType) public view returns(bytes32 hashDraw1, bytes32 hashDraw2, address drawnAddress, uint blockNumber, uint prize);
-    function addAddressValidTicket(address _address) public;
-    function getAddressCurrentTicketQty(address _address) public view returns(uint dailyTicketsBalance, uint weeklyTicketsBalance, uint monthlyTicketsBalance);
-    function closeDraw(uint8 _drawType) public;
+abstract contract LottochainDrawsHistory {
+    function addDrawHistory(uint _drawDate, uint8 _drawType, bytes32 _hashDraw1, bytes32 _hashDraw2, address _drawnAddress, uint _prize) public virtual;
+    function getDrawHistory(uint _drawDate, uint8 _drawType) public view  virtual returns(bytes32 hashDraw1, bytes32 hashDraw2, address drawnAddress, uint blockNumber, uint prize);
+    function addAddressValidTicket(address _address) public virtual;
+    function getAddressCurrentTicketQty(address _address) public view virtual returns(uint dailyTicketsBalance, uint weeklyTicketsBalance, uint monthlyTicketsBalance);
+    function closeDraw(uint8 _drawType) public virtual;
 }
 
 contract Lottochain {
@@ -113,7 +118,7 @@ contract Lottochain {
      *
      * Assigns contract owner
      */
-    function Lottochain() public {
+    constructor() {
         owner = msg.sender;
         // Just being safe.
         potentialOwner = msg.sender;
@@ -252,60 +257,61 @@ contract Lottochain {
     ///@param _drawType The type of Draw: 1 = Daily, 2 = Weekly, 3 = Monthly, 4 = Super Tickets
     ///@param _hashDraw1 First Hash to compose the draw seed
     ///@param _hashDraw2 Second Hash to compose the draw seed
-    function drawWinner (
-        uint _drawDate,
-        uint8 _drawType,
-        bytes32 _hashDraw1, 
-        bytes32 _hashDraw2
-    ) 
-        onlyAdmins
-        public
-    {
-    
-        require(_drawType == 1 || _drawType == 2 || _drawType == 3 || _drawType == 4);
-        
-        uint prize;
-        uint drawIndex;
-        address drawnAddress;
-        
-        LottochainDrawsHistory lottochainDrawsHistory = LottochainDrawsHistory(drawsHistoryContractAddress);
+    function drawWinner(
+    uint _drawDate,
+    uint8 _drawType,
+    bytes32 _hashDraw1,
+    bytes32 _hashDraw2,
+    address _drawnAddress
+) public onlyAdmins {
+    require(authorizedAddresses[msg.sender], "Only administrators can call this function");
 
-        //Daily Draw
-        if(_drawType == 1 && dailyTicketsIndex > 0) {
-            //Checks if the prize is still a profit considering current ticket price
-            require(dailyPrize >= ticketPrice);
-            
-            //Derives the index of the Winner
-            drawIndex = (add(uint(_hashDraw1), uint(_hashDraw2)) % dailyTicketsIndex) + 1;
+    address payable drawnAddress = payable(address(_drawnAddress));
 
-            require(drawIndex <= dailyTicketsIndex);
-            
-            //Finds the address related to the index in the Daily Tickets list
-            drawnAddress = dailyTickets[drawIndex];
-            
-            //Resets the index so the list is reinitialized
-            dailyTicketsIndex = 0;
-            
-            //Brings the prize to an internal variable
-            prize = dailyPrize;
-            
-            //Clears the prize, preventing reentrancy attacks
-            dailyPrize = 0;
-    
-            //Emits the draw event to the blockchain
-            emit DrawTicket(_drawDate, _drawType, _hashDraw1, _hashDraw2, drawnAddress, prize);
+    require(_drawType == 1 || _drawType == 2 || _drawType == 3 || _drawType == 4, "Invalid draw type. Must be 1, 2, 3, or 4");
 
-            //Adds the draw attributes to the draws history contract for future reference
-            lottochainDrawsHistory.addDrawHistory(_drawDate, 1, _hashDraw1, _hashDraw2, drawnAddress, prize);
-            
-            //Closes the daily draw in the address-ticket-tracking mapping
-            lottochainDrawsHistory.closeDraw(1);
-            
-            //Transfers the net prize to the winner
-            drawnAddress.transfer(prize);
+    uint prize;
+    uint drawIndex;
+
+    LottochainDrawsHistory lottochainDrawsHistory = LottochainDrawsHistory(drawsHistoryContractAddress);
+
+    // Daily Draw
+    if (_drawType == 1 && dailyTicketsIndex > 0) {
+        // Checks if the prize is still a profit considering the current ticket price
+        require(dailyPrize >= ticketPrice);
+
+        // Derives the index of the Winner
+        drawIndex = (add(uint(_hashDraw1), uint(_hashDraw2)) % dailyTicketsIndex) + 1;
+
+        require(drawIndex <= dailyTicketsIndex);
+
+        // Finds the address related to the index in the Daily Tickets list
+        drawnAddress = payable(dailyTickets[drawIndex]);
+
+        // Resets the index so the list is reinitialized
+        dailyTicketsIndex = 0;
+
+        // Brings the prize to an internal variable
+        prize = dailyPrize;
+
+        // Clears the prize, preventing reentrancy attacks
+        dailyPrize = 0;
+
+        // Emits the draw event to the blockchain
+        emit DrawTicket(_drawDate, _drawType, _hashDraw1, _hashDraw2, drawnAddress, prize);
+
+        // Adds the draw attributes to the draws history contract for future reference
+        lottochainDrawsHistory.addDrawHistory(_drawDate, 1, _hashDraw1, _hashDraw2, drawnAddress, prize);
+
+        // Closes the daily draw in the address-ticket-tracking mapping
+        lottochainDrawsHistory.closeDraw(1);
+
+        // Transfers the net prize to the winner
+        drawnAddress.transfer(prize);
+    }
 
         //Weekly Draw
-        } else if(_drawType == 2 && weeklyTicketsIndex > 0) {
+        else if(_drawType == 2 && weeklyTicketsIndex > 0) {
             //Checks if the prize is still a profit considering current ticket price
             require(weeklyPrize >= ticketPrice);
             
@@ -315,7 +321,7 @@ contract Lottochain {
             require(drawIndex <= weeklyTicketsIndex);
             
             //Finds the address related to the index in the Daily Tickets list
-            drawnAddress = weeklyTickets[drawIndex];
+            drawnAddress = payable(weeklyTickets[drawIndex]);
             
             //Resets the index so the list is reinitialized
             weeklyTicketsIndex = 0;
@@ -349,7 +355,7 @@ contract Lottochain {
             require(drawIndex <= monthlyTicketsIndex);
             
             //Finds the address related to the index in the Daily Tickets list
-            drawnAddress = monthlyTickets[drawIndex];
+            drawnAddress = payable(monthlyTickets[drawIndex]);
             
             //Resets the index so the list is reinitialized
             monthlyTicketsIndex = 0;
@@ -392,7 +398,7 @@ contract Lottochain {
             assert(drawIndex <= superTicketsQty - 1);
             
             //Finds the address related to the index in the Daily Tickets list
-            drawnAddress = lottochainSuperTickets.superTickets(drawIndex);
+            drawnAddress = payable(lottochainSuperTickets.superTickets(drawIndex));
 
             //Brings the prize to an internal variable
             prize = superTicketsPrize;
@@ -418,7 +424,7 @@ contract Lottochain {
     
     ///@dev Withdraws the fees gathered
     ///@param _to The address where to withdraw into
-    function withdrawFees(address _to, uint _wallet) onlyAdmins public {
+    function withdrawFees(address payable _to, uint _wallet) onlyAdmins public {
         require(_wallet == 1 || _wallet == 2);
         
         if (_wallet == 1) {
