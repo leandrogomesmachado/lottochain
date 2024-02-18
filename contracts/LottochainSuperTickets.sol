@@ -1,7 +1,11 @@
-pragma solidity ^0.4.21;
+pragma solidity ^0.8.24;
 
-contract LottochainSTLogic {
-    function transferTokens(address _from, address _to, uint _value) public;
+///@title Used for the SuperTickets
+///@author paulofelipe84 - paulo.barbosa@lottochain.io | Leandro Machado - sr.machado@gmail.com
+// SPDX-License-Identifier: MIT
+
+abstract contract LottochainSTLogic {
+    function transferTokens(address payable _from, address payable _to, uint _value) public virtual ;
 }
 
 contract LottochainSuperTickets {
@@ -42,7 +46,7 @@ contract LottochainSuperTickets {
      *
      * Initializes contract with initial supply tokens to the creator of the contract
      */
-    function LottochainSuperTickets() public {
+    constructor() {
         owner = msg.sender;
         
         // Just being safe.
@@ -142,8 +146,7 @@ contract LottochainSuperTickets {
         require(_value > 0);
         // Checks if _from and _to are the same
         require(_from != _to);
-        // Prevents transfer to 0x0 address.
-        require(_to != 0x0);
+        
         // Checks if the sender has enough
         require(balanceOf[_from] >= _value);
         // Checks for overflows
@@ -157,12 +160,13 @@ contract LottochainSuperTickets {
         // Emits the transfer event
         emit Transfer(_from, _to, _value);
         // Asserts are used to use static analysis to find bugs in your code. They should never fail
-        assert(balanceOf[_from] + balanceOf[_to] == previousBalances);
-        
+        assert(balanceOf[_from] + balanceOf[_to] == previousBalances);        
         // Instantiates the Super Ticket Logic contract
         LottochainSTLogic lottochainSTLogic = LottochainSTLogic(lottochainSTLogicContract);
+        address payable _fromPayable = payable(_from);
+        address payable _toPayable = payable(_to);
         // Processes transfer in the logics contract
-        lottochainSTLogic.transferTokens(_from, _to, _value);
+        lottochainSTLogic.transferTokens(_fromPayable, _toPayable, _value);
     }
 
     /**
@@ -214,8 +218,7 @@ contract LottochainSuperTickets {
         _transfer(_drawnAddress, owner, 1);
     }
 
-    // disable pay HTMLCOIN to this contract
-    function () public payable {
-        revert();
-    }
+    receive() external payable {
+    revert("Wrong contracty. Ether not accepted to this contract!");
+}
 }
